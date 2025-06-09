@@ -87,3 +87,15 @@ def encode_ordinal_features(train, test, ordinal_map, ord_columns):
     train[ord_columns] = ord_encoder.transform(train[ord_columns])
     test[ord_columns] = ord_encoder.transform(test[ord_columns])
     return train, test,ord_encoder
+
+# qqplot
+import scipy.stats as stats
+
+def qqplot(series):
+    # Create a Q-Q plot
+    plt.figure(figsize=(5, 3))
+    stats.probplot(series, dist='norm', plot=plt)
+    plt.title('Normal Q-Q Plot')
+    plt.xlabel('Theoretical Quantiles')
+    plt.ylabel('Ordered Values')
+    plt.show()
