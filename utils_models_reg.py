@@ -1,7 +1,10 @@
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.express as px
 import pandas as pd
+import seaborn as sns
+
 
 ####### metrics ########
 def performance(y_test, y_pred):
@@ -56,7 +59,94 @@ def lr(X_train_1, X_test_1, y_train_1, y_test_1, X_test_real_1, fit_intercept=Tr
     y_pred_test_real =  pd.DataFrame(y_pred_test_real, index=X_test_real_1.index, columns=y_test_1.columns)
     return y_fit_train, y_pred_test, y_pred_test_real
 
+# Feature forward Selection using aic
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+def aic_lr(n,k,mse):
+    """
+    Compute the Akaike Information Criterion (AIC) for a linear regression model.
+    """
+    log_likelihood = -n/2 * np.log(2 * np.pi * mse) - n/2
+    return -2 * log_likelihood + 2 * k
 
+def forward_select_features_aic(X_train, y_train, X_test, y_test):
+    selected_features_aic = []
+    remaining_features = list(X_train.columns)
+    best_score = float('inf')
+    n = len(X_train)
+    while remaining_features:
+        print('len(selected_features_aic)', len(selected_features_aic), best_score)
+        best_new_score, best_candidate = float('inf'), None
+        for candidate in remaining_features:
+            features_to_try = selected_features_aic + [candidate]
+            model = LinearRegression().fit(X_train[features_to_try], y_train)
+            y_pred = model.predict(X_test[features_to_try])
+            mse = mean_squared_error(y_test, y_pred)
+            aic=aic_lr(n, len(features_to_try), mse)
+            if aic < best_new_score:
+                best_new_score = aic
+                best_candidate = candidate
+        if best_candidate is not None and best_new_score < best_score:
+            selected_features_aic.append(best_candidate)
+            remaining_features.remove(best_candidate)
+            best_score = best_new_score
+        else:
+            break
+    return selected_features_aic
+
+# WLS
+def wls(errors,X_train, y_train, X_test, y_test):
+
+    # Calculate absolute errors from previous predictions
+    # errors = np.abs(y_train.values.flatten() - model_lr_aic.predict(X_train[selected_features_aic]).flatten())
+    weights = 1 / (errors + 1e-6)  # Add small constant to avoid division by zero
+
+    # Fit WLS using sample_weight (no feature selection but use the )
+    wls_sklearn = LinearRegression()
+    wls_sklearn.fit(X_train, y_train, sample_weight=weights)
+
+    # Predict on test set
+    y_pred_wls_sklearn = wls_sklearn.predict(X_test)
+
+    # Evaluate performance
+    (r2_train,rmse_train,mae_train), (r2_test,rmse_test,mae_test) = performance_both(y_train, wls_sklearn.predict(X_train), y_test, y_pred_wls_sklearn)
+    return wls_sklearn
+
+# Lasso
+from sklearn.linear_model import LassoCV
+def lasso_plot(lasso):
+    alpha_range = lasso.alphas_
+    mse_values = lasso.mse_path_.mean(axis = 1)
+    sd_values = lasso.mse_path_.std(axis = 1)
+
+    plt.plot(np.log(alpha_range), mse_values, "k-o")
+    plt.plot(np.log(alpha_range), mse_values + sd_values, "r--")
+    plt.plot(np.log(alpha_range), mse_values - sd_values, "r--")
+    plt.fill_between(np.log(alpha_range),
+                    mse_values + sd_values,
+                    mse_values - sd_values, alpha = .2)
+    print("alpha (regularization):", lasso.alpha_) #regularization
+    plt.plot([np.log(lasso.alpha_)] * 2, [0, (mse_values + sd_values).max()])  # 
+    plt.xlabel(r"$log(\alpha)$")
+    plt.ylabel("f{n_folds}-Fold CV MSE")
+    plt.show()
+
+
+def lasso_model(X_train, y_train, X_test, y_test, n_folds = 5):
+    n_folds = 5
+    lasso = LassoCV(n_alphas = 100, cv = n_folds)
+    lasso.fit(X_train, y_train)
+    lasso_plot(lasso)
+
+    coef = pd.DataFrame(lasso.coef_, index=X_train.columns, columns=['betas'])
+    selected_cols_lasso = coef[coef["betas"] != 0].index.tolist()
+    print(len(selected_cols_lasso), selected_cols_lasso)
+
+    y_pred_lasso = lasso.predict(X_test)
+    r2,rmse,mae = performance(y_test, y_pred_lasso)
+    return y_pred_lasso,lasso
+
+# Dtree
 from sklearn.tree import DecisionTreeRegressor
 def dtree(X_train_1, X_test_1, y_train_1, y_test_1,X_test_real_1):
     dtree_all = DecisionTreeRegressor(max_depth=5).fit(X_train_1, y_train_1)

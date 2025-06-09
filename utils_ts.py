@@ -3,6 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
 import numpy as np
+import seaborn as sns
+
 
 # trend
 def get_trend(df, order=2, datecol='date'):
@@ -209,3 +211,24 @@ def plot_acf_pacf(series,lags=365, title='' ):
         plt.show()
     except:
         pass
+
+## arima model
+from pmdarima import auto_arima
+## lungbox: high p means fail to reject H0 => residuals uncorrelated => model is good
+def arima(series, seasonality=7, pred_periods = 7):
+    model = auto_arima(
+        series,
+        # with_intercept=True,
+        # trend='linear', # need  with_intercept=True
+        seasonal=True,
+        m=seasonality,  # weekly seasonality: seasonality=7
+        stepwise=True,
+        trace=True,
+        suppress_warnings=True,
+        error_action="ignore",
+        information_criterion = 'aic'
+    )
+    display(model.summary())
+    display(model.order)
+    pred = pd.DataFrame(model.predict(n_periods=pred_periods))
+    return pred, model
