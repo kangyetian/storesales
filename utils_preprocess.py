@@ -196,6 +196,6 @@ from sklearn.model_selection import train_test_split
 def split_traintest(X, y, shuffle=True):
     X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.33, random_state=42, shuffle=shuffle)
-def split_traintest(X, y, shuffle=Falses):
+def split_traintest(X, y, shuffle=False):
     X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.33)

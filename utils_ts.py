@@ -212,9 +212,24 @@ def plot_acf_pacf(series,lags=365, title='' ):
     except:
         pass
 
+# adf: p<0.05 stationary
+from statsmodels.tsa.stattools import adfuller
+def adf_test(series):
+    # Run the ADF test
+    result = adfuller(series)
+
+    # Print results
+    print("ADF Statistic:", result[0])
+    print("p-value:", result[1])
+    print("Number of lags used:", result[2])
+    print("Number of observations:", result[3])
+    print("Critical Values:")
+    for key, value in result[4].items():
+        print(f"   {key}: {value}")
+
 ## arima model
+## lungbox: p<0.05: autocorrelated, high p: residuals uncorrelated => model is good
 from pmdarima import auto_arima
-## lungbox: high p means fail to reject H0 => residuals uncorrelated => model is good
 def arima(series, seasonality=7, pred_periods = 7):
     model = auto_arima(
         series,
